@@ -27,7 +27,7 @@ app.get('/medecin', async(req, res) => {
 })
 
 app.listen(8000, () =>{
-    console.log("Serveur à l'écoute");
+    console.log("Serveur à l'écoute sur http://localhost:8000");
 } )
 
 
