@@ -29,7 +29,7 @@ app.get('/medecin', async(req, res) => {
   
         const rows = await conn.query('SELECT * FROM medecins');
         res.status(200).json(rows)
-        console.log("Serveur à l'écoute");
+        console.log("Requête de récupération des medecins");
     }catch(err){
         console.log(err)
         throw err;
@@ -47,7 +47,7 @@ app.get('/medecin/:id', async(req, res) => {
   
         const rows = await conn.query('SELECT * FROM medecins WHERE id = ?', [req.params.id]);
         res.status(200).json(rows)
-        console.log("Serveur à l'écoute");
+        console.log("Requête de récupération d'un medecin");
     }catch(err){
         console.log(err)
         throw err;
@@ -74,6 +74,11 @@ app.post('/medecin', async (req, res) => {
         let exist = await mariadb.pool.query('SELECT * FROM medecins WHERE identifiant = ?', [identifiant]);
         if (exist.length > 0) {
             return res.status(400).json({ message: 'Cet identifiant est déjà utilisé.' });
+        }  else {
+            let exist = await mariadb.pool.query('SELECT * FROM admin WHERE identifiant = ?', [identifiant]);
+            if (exist.length > 0) {
+                return res.status(400).json({ message: 'Cet identifiant est déjà utilisé.' });
+            }
         }
         const hashedPassword = await bcrypt.hash(mdp, saltRounds);
         const conn = await mariadb.pool.getConnection();
@@ -81,8 +86,8 @@ app.post('/medecin', async (req, res) => {
         const rows = await conn.query('SELECT * FROM medecins;')    
         req.session.id = rows[0].id; // On stocke l'id de l'utilisateur dans la session
         console.log(req.session.id);
-        res.status(200).json({ message: "Utilisateur ajouté" });
-        console.log("Serveur à l'écoute");
+        res.status(200).json({ message: "medecin ajouté" });
+        console.log("Requête d'inscription");
     } catch (err) {
         console.log(err);
         res.status(500).json({ message: 'Une erreur est survenue lors de l\'inscription du médecin.' });
@@ -109,9 +114,9 @@ app.post('/medecin/login', async(req, res) => {
                 res.status(401).json({message: "Mot de passe incorrect"})
             }
         } else {
-            res.status(404).json({message: "Utilisateur non trouvé"})
+            res.status(404).json({message: "Médecin non trouvé"})
         }
-        console.log("Serveur à l'écoute");
+        console.log("Requête de connexion");
     }catch(err){
         console.log(err)
         throw err;
@@ -386,6 +391,154 @@ app.delete('/rdv/:id', async(req, res) => {
     }
 })
 
+/////////////////////////////////////////// Administrateur ///////////////////////////////////////////
+
+// Nouvelle admin A NE PAS METTRE DANS LE FRONT
+app.post('/admin', async (req, res) => {
+    console.log('Connexion')
+    console.log("body: " + JSON.stringify(req.body));
+    
+    let { identifiant, mdp } = req.body;
+    
+    const saltRounds = 10;
+    
+    if (!identifiant || !mdp) {
+        return res.status(400).json({ message: 'Veuillez saisir une adresse e-mail et un mot de passe.' });
+    }
+
+    try {
+        let exist = await mariadb.pool.query('SELECT * FROM admin WHERE identifiant = ?', [identifiant]);
+        if (exist.length > 0) {
+            return res.status(400).json({ message: 'Cet identifiant est déjà utilisé.' });
+        } else {
+            let exist = await mariadb.pool.query('SELECT * FROM medecins WHERE identifiant = ?', [identifiant]);
+            if (exist.length > 0) {
+                return res.status(400).json({ message: 'Cet identifiant est déjà utilisé.' });
+            }
+        }
+        const hashedPassword = await bcrypt.hash(mdp, saltRounds);
+        const conn = await mariadb.pool.getConnection();
+        await conn.query('INSERT INTO admin (identifiant, mdp) VALUES (?, ?)', [identifiant, hashedPassword]);
+        const rows = await conn.query('SELECT * FROM admin;')    
+        req.session.id_admin = rows[0].id; // On stocke l'id de l'admin dans la session
+        req.session.role = "admin";
+        console.log(req.session.id_admin);
+        res.status(200).json({ message: "Administrateur ajouté" });
+        console.log("Requête d'inscription administrateur");
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Une erreur est survenue lors de l\'inscription de l\'admin.' });
+    }
+});
+
+// Connexion admin
+app.post('/admin/login', async(req, res) => {
+    let conn;
+    console.log('Connexion')
+    try{
+        conn = await mariadb.pool.getConnection();
+        
+        const rows = await conn.query('SELECT * FROM admin WHERE identifiant = ?', [req.body.identifiant]);
+        if (rows.length > 0) {
+            if (bcrypt.compareSync(req.body.mdp, rows[0].mdp)) {
+                req.session.id_admin = rows[0].id; // On stocke l'id de l'admin dans la session
+                req.session.identifiant = rows[0].identifiant;
+                const token = jwt.sign({ sub: rows[0].id }, 'secret_key'); // On génère un token
+                console.log("token = " + req.session.id);
+                console.log("session = " + req.session.id_admin);
+
+                res.status(200).json({message: "Connexion réussie", token: token, id_admin: rows[0].id, identifiant: rows[0].identifiant});
+            } else {
+                res.status(401).json({message: "Mot de passe incorrect"})
+            }
+        } else {
+            res.status(404).json({message: "Administrateur non trouvé"})
+        }
+        console.log("Requête de connexion");
+    }catch(err){
+        console.log(err)
+        throw err;
+    }
+})
+
+// Deconnexion admin
+app.get('/admin/logout', async(req, res) => {
+    req.session.destroy();
+    res.status(200).json({message: "Déconnexion réussie"});
+})
+
+// Voir la liste des medecins
+app.get('/admin/medecins', async(req, res) => {
+    let conn;
+    console.log('Connexion')
+    try{
+        conn = await mariadb.pool.getConnection();
+        const rows = await conn.query('SELECT * FROM medecins');
+        res.status(200).json(rows)
+        console.log("Liste des médecins récupérée");
+    }catch(err){
+        console.log(err)
+        throw err;
+    }
+})
+
+// Voir la liste des patients d'un médecin
+app.get('/admin/medecin/:id_medecin/patients', async(req, res) => {
+    let conn;
+    console.log('Connexion')
+    try{
+        conn = await mariadb.pool.getConnection();
+        const rows = await conn.query('SELECT id, nom, prenom FROM patients WHERE id_medecin = ?', [req.params.id_medecin]);
+        res.status(200).json(rows)
+        console.log("Liste des patients récupérée");
+    }catch(err){
+        console.log(err)
+        throw err;
+    }
+})
+
+// Supprimer un patient et ses traitements et ses rendez-vous
+app.delete('/admin/patient/:id', async(req, res) => {
+    let conn;
+    console.log('Connexion')
+    try{
+        conn = await mariadb.pool.getConnection();
+        await conn.query('DELETE FROM traitement WHERE id_patient = ?', [req.params.id]);
+        await conn.query('DELETE FROM rendez_vous WHERE id_patient = ?', [req.params.id]);
+        await conn.query('DELETE FROM patients WHERE id = ?', [req.params.id]);
+        res.status(200).json({message: "Patient supprimé"});
+        console.log("Patient supprimé");
+    }catch(err){
+        console.log(err)
+        throw err;
+    }
+})
+
+/////////////////////////////////////////// Diférentier admin et médecin ///////////////////////////////////////////
+
+app.get('/role', async(req, res) => {
+    let conn;
+    console.log('Connexion')
+    try{
+        conn = await mariadb.pool.getConnection();
+        
+        let rows = await conn.query('SELECT * FROM admin WHERE identifiant = ?', [req.body.identifiant]);
+        if (rows.length < 0) {
+            rows = await conn.query('SELECT * FROM medecins WHERE identifiant = ?', [req.body.identifiant]);
+            if (rows.length < 0) {
+                res.status(404).json({message: "Utilisateur non trouvé"})
+            } else {
+                res.status(200).json({role: "medecin"})
+            }
+        } else {
+            res.status(200).json({role: "admin"})
+        }
+        console.log("Requête de différenciation admin et médecin");
+    }catch(err){
+        console.log(err)
+        throw err;
+    }
+})
 
 
 app.listen(8000, () =>{
