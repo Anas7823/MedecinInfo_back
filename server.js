@@ -109,7 +109,13 @@ app.post('/medecin/login', async(req, res) => {
                 console.log("token = " + req.session.id);
                 console.log("id_medecin = " + req.session.id_medecin);
 
-                res.status(200).json({message: "Connexion réussie", token: token, id_medecin: rows[0].id});
+                res.status(200).json({
+                    message: "Connexion réussie", 
+                    token: token, 
+                    id_medecin: rows[0].id,
+                    identifiant: rows[0].identifiant,
+                    role: "medecin",
+                });
             } else {
                 res.status(401).json({message: "Mot de passe incorrect"})
             }
@@ -154,15 +160,18 @@ app.get('/medecin/:id_medecin/patients', async(req, res) => {
     let conn;
     console.log('Connexion')
     let id_medecin = req.session.id_medecin;
-    console.log("id_medecin "+id_medecin);
-    id_medecin_url = req.params.id_medecin;
 
-    if (id_medecin != id_medecin_url) {
-        return res.status(401).json({message: "Vous n'êtes pas autorisé à voir cette liste de patients"});
-    }
+    console.log("id_medecin pour la liste des patients: "+ id_medecin);
+    let id_medecin_url = req.params.id_medecin;
+
+    // if (id_medecin !== id_medecin_url) {
+    //     return res.status(401).json({message: "Vous n'êtes pas autorisé à voir cette liste de patients"});
+    // }
     try{
         conn = await mariadb.pool.getConnection();
-        const rows = await conn.query('SELECT * FROM patients WHERE id_medecin = ?', [id_medecin]);
+        const rows = await conn.query('SELECT * FROM patients WHERE id_medecin = ?', [id_medecin_url]);
+        console.log("reqete: " + 'SELECT * FROM patients WHERE id_medecin = ' + id_medecin_url);
+        console.log(rows);
         res.status(200).json(rows)
         console.log("Liste des patients récupérée");
     }catch(err){
@@ -447,8 +456,16 @@ app.post('/admin/login', async(req, res) => {
                 const token = jwt.sign({ sub: rows[0].id }, 'secret_key'); // On génère un token
                 console.log("token = " + req.session.id);
                 console.log("session = " + req.session.id_admin);
+                console.log("id_admin = " + rows[0].id);
+                console.log("identifiant = " + rows[0].identifiant);
 
-                res.status(200).json({message: "Connexion réussie", token: token, id_admin: rows[0].id, identifiant: rows[0].identifiant});
+                res.status(200).json({
+                    message: "Connexion réussie", 
+                    token: token, 
+                    id_admin: rows[0].id, 
+                    identifiant: rows[0].identifiant,
+                    role: "admin",
+                });
             } else {
                 res.status(401).json({message: "Mot de passe incorrect"})
             }
@@ -459,6 +476,24 @@ app.post('/admin/login', async(req, res) => {
     }catch(err){
         console.log(err)
         throw err;
+    }
+})
+
+// Voir un admin
+app.get('/admin/:id', async(req, res) => {
+    let conn;
+    console.log('Connexion')
+    try{
+        conn = await mariadb.pool.getConnection();
+  
+        const rows = await conn.query('SELECT * FROM admin WHERE id = ?', [req.params.id]);
+        res.status(200).json(rows[0])
+        console.log("Requête de récupération d'un admin");
+    }catch(err){
+        console.log(err)
+        throw err;
+    }finally{
+        if (conn) return conn.end();
     }
 })
 
@@ -517,29 +552,31 @@ app.delete('/admin/patient/:id', async(req, res) => {
 
 /////////////////////////////////////////// Diférentier admin et médecin ///////////////////////////////////////////
 
-app.get('/role', async(req, res) => {
-    let conn;
-    console.log('Connexion')
-    try{
-        conn = await mariadb.pool.getConnection();
-        
-        let rows = await conn.query('SELECT * FROM admin WHERE identifiant = ?', [req.body.identifiant]);
-        if (rows.length < 0) {
-            rows = await conn.query('SELECT * FROM medecins WHERE identifiant = ?', [req.body.identifiant]);
-            if (rows.length < 0) {
-                res.status(404).json({message: "Utilisateur non trouvé"})
-            } else {
-                res.status(200).json({role: "medecin"})
-            }
-        } else {
-            res.status(200).json({role: "admin"})
-        }
-        console.log("Requête de différenciation admin et médecin");
-    }catch(err){
-        console.log(err)
-        throw err;
-    }
-})
+// app.get('/role/:identifiant', async(req, res) => {
+//     let conn;
+//     console.log('Connexion')
+//     try{
+//         conn = await mariadb.pool.getConnection();
+//         console.log(req.params.identifiant);
+//         let rows = await conn.query('SELECT * FROM medecins WHERE identifiant = ?', [req.params.identifiant]);
+//         if (rows.length < 0) {
+//             rows = await conn.query('SELECT * FROM medecins WHERE identifiant = ?', [req.params.identifiant]);
+//             if (rows.length < 0) {
+//                 res.status(404).json({message: "Utilisateur non trouvé"})
+//             } else {
+//                 res.status(200).json({role: "medecin"})
+//             }
+//         } else if (rows.length > 0) {
+//             res.status(200).json({role: "admin"})
+//         } else {
+//             res.status(404).json({message: "Utilisateur non trouvé"})
+//         }
+//         console.log("Requête de différenciation admin et médecin terminer");
+//     }catch(err){
+//         console.log(err)
+//         throw err;
+//     }
+// })
 
 
 app.listen(8000, () =>{
