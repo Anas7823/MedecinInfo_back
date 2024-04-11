@@ -46,7 +46,7 @@ app.get('/medecin/:id', async(req, res) => {
         conn = await mariadb.pool.getConnection();
   
         const rows = await conn.query('SELECT * FROM medecins WHERE id = ?', [req.params.id]);
-        res.status(200).json(rows)
+        res.status(200).json(rows[0])
         console.log("Requête de récupération d'un medecin");
     }catch(err){
         console.log(err)
@@ -107,7 +107,7 @@ app.post('/medecin/login', async(req, res) => {
                 req.session.id_medecin = rows[0].id; // On stocke l'id du médecin dans la session
                 const token = jwt.sign({ sub: rows[0].id }, 'secret_key'); // On génère un token
                 console.log("token = " + req.session.id);
-                console.log("session = " + req.session.id_medecin);
+                console.log("id_medecin = " + req.session.id_medecin);
 
                 res.status(200).json({message: "Connexion réussie", token: token, id_medecin: rows[0].id});
             } else {
