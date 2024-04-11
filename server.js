@@ -194,10 +194,11 @@ app.post('/patient', async (req, res) => {
     console.log('Connexion')
     console.log("body: " + JSON.stringify(req.body));
     
-    let { nom, prenom } = req.body;
+    let { nom, prenom, id_medecin } = req.body;
+    console.log("id_medecin_body = " + id_medecin);
     
     // id_medecin est récupéré à l'aide de la session
-    let id_medecin = req.session.id_medecin;
+    // let id_medecin = req.session.id_medecin;
     console.log("id_medecin = " + id_medecin);
     try {
         const conn = await mariadb.pool.getConnection();
