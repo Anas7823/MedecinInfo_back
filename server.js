@@ -181,16 +181,22 @@ app.get('/medecin/:id_medecin/patients', async(req, res) => {
 })
 
 // Voir un patient que seul le medecin peut voir
-app.get('/medecin/patients/:id', async(req, res) => {
+app.post('/medecin/patients/:id', async(req, res) => {
     let conn;
     console.log('Connexion')
-    let id_medecin = req.session.id_medecin;
+    console.log("DKLqsdqsjdkqsjdlkjqsldjlkqsjdjqslkdjlqsS");
+    console.log( req.params.id)
+    console.log("DKLqsdqsjdkqsjdlkjqsldjlkqsjdjqslkdjlqsS");;
+    let id_medecin = req.body.id_medecin;
+
+    console.log("Données de la session: "+req.session.id);
     console.log("id_medecin "+id_medecin);
     try{
         conn = await mariadb.pool.getConnection();
         const rows = await conn.query('SELECT * FROM patients WHERE id = ? AND id_medecin = ?', [req.params.id, id_medecin]);
-        res.status(200).json(rows)
-        console.log("Patient récupéré");
+        console.log("Patient récupéré: "+ rows);
+        res.status(200).json(rows[0])
+
     }catch(err){
         console.log(err)
         throw err;
@@ -203,7 +209,8 @@ app.post('/patient', async (req, res) => {
     console.log('Connexion')
     console.log("body: " + JSON.stringify(req.body));
     
-    let { nom, prenom, id_medecin } = req.body;
+    let { nom, prenom } = req.body;
+    let id_medecin = req.body.id_medecin;
     console.log("id_medecin_body = " + id_medecin);
     
     // id_medecin est récupéré à l'aide de la session
@@ -240,10 +247,10 @@ app.get('/traitements', async(req, res) => {
 })
 
 // Liste des traitements d'un patient que seul le medecin peut voir
-app.get('/patient/:id_patient/traitements', async(req, res) => {
+app.post('/patient/:id_patient/traitements', async(req, res) => {
     let conn;
     console.log('Connexion')
-    let id_medecin = req.session.id_medecin;
+    let id_medecin = req.body.id_medecin;
     console.log("id_medecin "+id_medecin);
     try{
         conn = await mariadb.pool.getConnection();
@@ -347,10 +354,10 @@ app.get('/medecin/:id_medecin/rdvs', async(req, res) => {
 })
 
 // Liste des rendez-vous d'un patient que seul le medecin peut voir
-app.get('/patient/:id_patient/rdvs', async(req, res) => {
+app.post('/patient/:id_patient/rdvs', async(req, res) => {
     let conn;
     console.log('Connexion')
-    let id_medecin = req.session.id_medecin;
+    let id_medecin = req.body.id_medecin;
     console.log("id_medecin "+id_medecin);
     try{
         conn = await mariadb.pool.getConnection();
@@ -504,7 +511,7 @@ app.get('/admin/logout', async(req, res) => {
 })
 
 // Voir la liste des medecins
-app.get('/admin/medecins', async(req, res) => {
+app.post('/admin/medecins', async(req, res) => {
     let conn;
     console.log('Connexion')
     try{
