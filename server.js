@@ -156,10 +156,10 @@ app.get('/patients', async(req, res) => {
 })
 
 // Liste des patients d'un medecin que seul le medecin peut voir
-app.get('/medecin/:id_medecin/patients', async(req, res) => {
+app.post('/medecin/:id_medecin/patients', async(req, res) => {
     let conn;
     console.log('Connexion')
-    let id_medecin = req.session.id_medecin;
+    let id_medecin = req.body.id_medecin;
 
     console.log("id_medecin pour la liste des patients: "+ id_medecin);
     let id_medecin_url = req.params.id_medecin;
