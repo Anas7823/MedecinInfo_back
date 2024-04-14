@@ -195,8 +195,26 @@ app.post('/medecin/patients/:id', async(req, res) => {
         conn = await mariadb.pool.getConnection();
         const rows = await conn.query('SELECT * FROM patients WHERE id = ? AND id_medecin = ?', [req.params.id, id_medecin]);
         console.log("Patient récupéré: "+ rows);
+        console.log("url: " + 'SELECT * FROM patients WHERE id = ' + req.params.id + ' AND id_medecin = ' + id_medecin);
         res.status(200).json(rows[0])
 
+    }catch(err){
+        console.log(err)
+        throw err;
+    }
+})
+
+// Modifier un patient que seul le medecin peut modifier
+app.put('/medecin/patients/:id', async(req, res) => {
+    let conn;
+    console.log('Connexion')
+    let id_medecin = req.body.id_medecin;
+    console.log("id_medecin = " + id_medecin);
+    try{
+        conn = await mariadb.pool.getConnection();
+        await conn.query('UPDATE patients SET nom = ?, prenom = ? WHERE id = ? AND id_medecin = ?', [req.body.nom, req.body.prenom, req.params.id, id_medecin]);
+        res.status(200).json({message: "Patient modifié"});
+        console.log("Patient modifié");
     }catch(err){
         console.log(err)
         throw err;
