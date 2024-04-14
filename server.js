@@ -378,7 +378,7 @@ app.post('/new_rdv/patient/:id_patient', async (req, res) => {
     let { date, heure } = req.body;
     
     // id_medecin est récupéré à l'aide de la session
-    let id_medecin = req.session.id_medecin;
+    let id_medecin = req.body.id_medecin;
     console.log("id_medecin = " + id_medecin);
     try {
         const conn = await mariadb.pool.getConnection();
@@ -460,6 +460,8 @@ app.post('/admin/login', async(req, res) => {
             if (bcrypt.compareSync(req.body.mdp, rows[0].mdp)) {
                 req.session.id_admin = rows[0].id; // On stocke l'id de l'admin dans la session
                 req.session.identifiant = rows[0].identifiant;
+                req.session.role = "admin";
+                
                 const token = jwt.sign({ sub: rows[0].id }, 'secret_key'); // On génère un token
                 console.log("token = " + req.session.id);
                 console.log("session = " + req.session.id_admin);
