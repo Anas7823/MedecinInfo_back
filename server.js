@@ -337,10 +337,10 @@ app.get('/rdvs', async(req, res) => {
 })
 
 // Liste des rendez-vous d'un medecin que seul lui peut voir
-app.get('/medecin/:id_medecin/rdvs', async(req, res) => {
+app.post('/medecin/:id_medecin/rdvs', async(req, res) => {
     let conn;
     console.log('Connexion')
-    let id_medecin = req.session.id_medecin;
+    let id_medecin = req.body.id_medecin;
     console.log("id_medecin "+id_medecin);
     try{
         conn = await mariadb.pool.getConnection();
